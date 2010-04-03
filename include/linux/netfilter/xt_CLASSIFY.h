@@ -5,6 +5,7 @@
 
 struct xt_classify_target_info {
 	__u32 priority;
+	__u8 add_mark;
 };
 
 #endif /*_XT_CLASSIFY_H */

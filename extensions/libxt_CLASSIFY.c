@@ -5,6 +5,7 @@
 
 enum {
 	O_SET_CLASS = 0,
+	O_ADD_MARK = 1,
 };
 
 static void
@@ -12,11 +13,14 @@ CLASSIFY_help(void)
 {
 	printf(
 "CLASSIFY target options:\n"
-"--set-class MAJOR:MINOR    Set skb->priority value (always hexadecimal!)\n");
+"--set-class MAJOR:MINOR    Set skb->priority value (always hexadecimal!)\n"
+"--add-mark                 Add value of skb->mark to skb->priority (PlanetLab specific)\n");
 }
 
 static const struct xt_option_entry CLASSIFY_opts[] = {
 	{.name = "set-class", .id = O_SET_CLASS, .type = XTTYPE_STRING,
+	 .flags = XTOPT_MAND},
+	{.name = "add-mark", .id = O_ADD_MARK, .type = XTTYPE_STRING,
 	 .flags = XTOPT_MAND},
 	XTOPT_TABLEEND,
 };
@@ -57,6 +61,9 @@ CLASSIFY_print(const void *ip,
 		(const struct xt_classify_target_info *)target->data;
 	printf(" CLASSIFY set");
 	CLASSIFY_print_class(clinfo->priority, numeric);
+
+	if (clinfo->add_mark)
+		printf ("add-mark ");
 }
 
 static void
@@ -67,6 +74,9 @@ CLASSIFY_save(const void *ip, const struct xt_entry_target *target)
 
 	printf(" --set-class %.4x:%.4x",
 	       TC_H_MAJ(clinfo->priority)>>16, TC_H_MIN(clinfo->priority));
+
+	if (clinfo->add_mark)
+		printf("--add-mark ");
 }
 
 static struct xtables_target classify_target = { 

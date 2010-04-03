@@ -19,6 +19,7 @@ enum {
 	XT_MARK_SET=0,
 	XT_MARK_AND,
 	XT_MARK_OR,
+	IPT_MARK_COPYXID,
 };
 
 struct xt_mark_target_info_v1 {
@@ -36,13 +37,15 @@ static void MARK_help(void)
 "MARK target options:\n"
 "  --set-mark value                   Set nfmark value\n"
 "  --and-mark value                   Binary AND the nfmark with value\n"
-"  --or-mark  value                   Binary OR  the nfmark with value\n");
+"  --or-mark  value                   Binary OR  the nfmark with value\n"
+"  --copy-xid                         Set nfmark to be the connection xid (PlanetLab specific)\n");
 }
 
 static const struct option MARK_opts[] = {
 	{.name = "set-mark", .has_arg = true, .val = '1'},
 	{.name = "and-mark", .has_arg = true, .val = '2'},
 	{.name = "or-mark",  .has_arg = true, .val = '3'},
+	{.name = "copy-xid", .has_arg = true, .val = '4'},
 	XT_GETOPT_TABLEEND,
 };
 
@@ -52,6 +55,7 @@ static const struct option mark_tg_opts[] = {
 	{.name = "and-mark",  .has_arg = true, .val = '&'},
 	{.name = "or-mark",   .has_arg = true, .val = '|'},
 	{.name = "xor-mark",  .has_arg = true, .val = '^'},
+	{.name = "copy-xid",  .has_arg = true, .val = '%'},
 	XT_GETOPT_TABLEEND,
 };
 
@@ -63,6 +67,7 @@ static void mark_tg_help(void)
 "  --set-mark value[/mask]   Clear bits in mask and OR value into nfmark\n"
 "  --and-mark bits           Binary AND the nfmark with bits\n"
 "  --or-mark bits            Binary OR the nfmark with bits\n"
+"  --copy-xid                Set nfmark to be the connection xid (PlanetLab specific)\n"
 "  --xor-mask bits           Binary XOR the nfmark with bits\n"
 "\n");
 }
@@ -124,6 +129,11 @@ MARK_parse_v1(int c, char **argv, int invert, unsigned int *flags,
 	case '3':
 	        markinfo->mode = XT_MARK_OR;
 		break;
+	case '4':
+	        markinfo->mode = IPT_MARK_COPYXID;
+		break;
+	default:
+		return 0;
 	}
 
 	if (!xtables_strtoui(optarg, NULL, &mark, 0, UINT32_MAX))
@@ -189,6 +199,15 @@ static int mark_tg_parse(int c, char **argv, int invert, unsigned int *flags,
 		info->mark = value;
 		info->mask = 0;
 		break;
+
+	case '%': /* --copy-xid */
+		xtables_param_act(XTF_ONE_ACTION, "MARK", *flags & F_MARK);
+		info->mark = ~0U; /* Consistency check */
+		info->mask = mask;
+		break;
+
+	default:
+		return false;
 	}
 
 	*flags |= F_MARK;
@@ -199,7 +218,7 @@ static void mark_tg_check(unsigned int flags)
 {
 	if (flags == 0)
 		xtables_error(PARAMETER_PROBLEM, "MARK: One of the --set-xmark, "
-		           "--{and,or,xor,set}-mark options is required");
+		           "--{and,or,xor,set}-mark, or --copy-xid options is required");
 }
 
 static void
@@ -242,6 +261,9 @@ static void MARK_print_v1(const void *ip, const struct xt_entry_target *target,
 	case XT_MARK_OR: 
 		printf(" MARK or");
 		break;
+	case IPT_MARK_COPYXID: 
+		printf("MARK copyxid ");
+		break;
 	}
 	print_mark(markinfo->mark);
 }
@@ -251,8 +273,10 @@ static void mark_tg_print(const void *ip, const struct xt_entry_target *target,
 {
 	const struct xt_mark_tginfo2 *info = (const void *)target->data;
 
-	if (info->mark == 0)
-		printf(" MARK and 0x%x", (unsigned int)(uint32_t)~info->mask);
+	if (info->mark == ~0U)
+		printf(" MARK copy-xid");
+	else if (info->mark == 0)
+		printf(" MARK and 0x%x ", (unsigned int)(u_int32_t)~info->mask);
 	else if (info->mark == info->mask)
 		printf(" MARK or 0x%x", info->mark);
 	else if (info->mask == 0)
@@ -278,6 +302,9 @@ static void MARK_save_v1(const void *ip, const struct xt_entry_target *target)
 	case XT_MARK_OR: 
 		printf(" --or-mark");
 		break;
+	case IPT_MARK_COPYXID:
+		printf("--copy-xid ");
+		break;
 	}
 	print_mark(markinfo->mark);
 }
@@ -286,7 +313,10 @@ static void mark_tg_save(const void *ip, const struct xt_entry_target *target)
 {
 	const struct xt_mark_tginfo2 *info = (const void *)target->data;
 
-	printf(" --set-xmark 0x%x/0x%x", info->mark, info->mask);
+	if (info->mark==~0U)
+		printf(" --copy-xid 0x0");
+	else
+		printf(" --set-xmark 0x%x/0x%x ", info->mark, info->mask);
 }
 
 static struct xtables_target mark_tg_reg[] = {

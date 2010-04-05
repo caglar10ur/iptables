@@ -2,7 +2,7 @@
 #   Default: -none-
 # Space separated list of nat helpers (e.g. 'ip_nat_ftp ip_nat_irc'), which
 # are loaded after the firewall rules are applied. Options for the helpers are
-# stored in /etc/modules.conf.
+# stored in /etc/modprobe.conf.
 IPTABLES_MODULES="ip_conntrack tun"
 
 # Unload modules on restart and stop

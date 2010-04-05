@@ -10,13 +10,13 @@
 #
 ### BEGIN INIT INFO
 # Provides: iptables
-# Default-Start:  2 3 4 5
+# Required-Start:
+# Required-Stop:
+# Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: start and stop iptables firewall
 # Description: Start, stop and save iptables firewall
 ### END INIT INFO
-
-# from http://fr2.rpmfind.net/linux/fedora/releases/10/Everything/source/SRPMS/iptables-1.4.1.1-2.fc10.src.rpm
 
 # Source function library.
 . /etc/init.d/functions
@@ -46,6 +46,8 @@ IPTABLES_SAVE_ON_STOP="no"
 IPTABLES_SAVE_ON_RESTART="no"
 IPTABLES_SAVE_COUNTER="no"
 IPTABLES_STATUS_NUMERIC="yes"
+IPTABLES_STATUS_VERBOSE="no"
+IPTABLES_STATUS_LINENUMBERS="yes"
 
 # Load firewall configuration.
 [ -f "$IPTABLES_CONFIG" ] && . "$IPTABLES_CONFIG"
@@ -194,24 +196,6 @@ start() {
 	failure; echo; return 1
     fi
     
-    # Tuntap initialization
-
-    if [ -z "$taps" -a -r /etc/planetlab/node_id ] ; then
-        # If this node is not "virtually multi-homed", just bring up
-        # the tap interface with a PLB private address. The PLB
-        # convention is to assign a unique 10.x.y.0/24 network to each
-        # node where x.y is the PlanetLab node ID of the machine in
-        # host order:
-        #
-        # x = (node_id / 256) % 256
-        # y = node_id % 256
-        #
-        node_id=$(cat /etc/planetlab/node_id)
-        taps="tap0"
-        tap0=$(printf 10.%d.%d.1 $((($node_id / 256) % 256)) $(($node_id % 256)))
-        tapmask=255.0.0.0
-    fi
-
     # Load additional modules (helpers)
     if [ -n "$IPTABLES_MODULES" ]; then
 	echo -n $"${IPTABLES}: Loading additional modules: "
@@ -224,34 +208,6 @@ start() {
 	[ $ret -eq 0 ] && success || failure
 	echo
     fi
-
-    for tap in $taps ; do
-        # Configuration for this tap (address/proxy)
-        eval cfg=\$$tap
-        addr=${cfg%/*}
-        proxy=${cfg#*/}
-
-        # Set MAC address to something predictable
-        mac=$(printf 00:FF:%X:%X:%X:%X $(echo $addr | sed -e 's/\./ /g'))
-
-        # Bring up this interface. Optimize the MTU for the PlanetLab
-        # Backbone (1500/Ethernet - 4/GRE - 8/UDP - 20/IP = 1468).
-            ifconfig $tap down && \
-            ifconfig $tap hw ether $mac mtu 1468 && \
-            ifconfig $tap $addr ${proxy:+pointopoint $proxy} netmask ${tapmask:=255.255.255.255} up
-
-        # Stuffing the proxy for this address in the pointopoint field
-        # creates a static route to the proxy that we do not want
-        # present.
-        if [ -n "$proxy" -a "$proxy" != "$addr" ] ; then
-                ip route del $proxy
-        fi
-
-        # Enable route through this interface
-            ip route add default dev $tap tab 1 && \
-            ip rule add from $addr tab 1
-    done
-
     
     touch $VAR_SUBSYS_IPTABLES
     return $ret
@@ -279,13 +235,7 @@ stop() {
 	[ $ret -eq 0 ] && success || failure
 	echo
     fi
-
-    # Take down vnet interfaces
-    for dev in $taps tap0 ; do
-        action $"Shutting down interface $dev: " \
-            ifconfig $dev 0.0.0.0 down
-    done		
-
+    
     rm -f $VAR_SUBSYS_IPTABLES
     return $ret
 }

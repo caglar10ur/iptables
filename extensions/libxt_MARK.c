@@ -19,7 +19,6 @@ enum {
 	XT_MARK_SET=0,
 	XT_MARK_AND,
 	XT_MARK_OR,
-	IPT_MARK_COPYXID,
 };
 
 struct xt_mark_target_info_v1 {
@@ -128,9 +127,6 @@ MARK_parse_v1(int c, char **argv, int invert, unsigned int *flags,
 		break;
 	case '3':
 	        markinfo->mode = XT_MARK_OR;
-		break;
-	case '4':
-	        markinfo->mode = IPT_MARK_COPYXID;
 		break;
 	default:
 		return 0;
@@ -261,9 +257,6 @@ static void MARK_print_v1(const void *ip, const struct xt_entry_target *target,
 	case XT_MARK_OR: 
 		printf(" MARK or");
 		break;
-	case IPT_MARK_COPYXID: 
-		printf("MARK copyxid ");
-		break;
 	}
 	print_mark(markinfo->mark);
 }
@@ -301,9 +294,6 @@ static void MARK_save_v1(const void *ip, const struct xt_entry_target *target)
 		break;
 	case XT_MARK_OR: 
 		printf(" --or-mark");
-		break;
-	case IPT_MARK_COPYXID:
-		printf("--copy-xid ");
 		break;
 	}
 	print_mark(markinfo->mark);

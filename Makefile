@@ -5,8 +5,8 @@ WEBFETCH		:= wget
 SHA1SUM			:= sha1sum
 
 ALL			+= iptables
-iptables-URL		:= http://www.netfilter.org/projects/iptables/files/iptables-1.4.7.tar.bz2
-iptables-SHA1SUM	:= 825594a2c5017852b03ce441f592c67070b4b29c
+iptables-URL		:= http://www.netfilter.org/projects/iptables/files/iptables-1.4.8.tar.bz2
+iptables-SHA1SUM	:= 53d756938e6dc748364ca1e1952f28dd9daad6a4
 iptables		:= $(notdir $(iptables-URL))
 
 all: $(ALL)

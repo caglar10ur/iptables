@@ -1,14 +1,29 @@
-Name: iptables
+#
+# $Id$
+#
+%define url $URL$
+
+%define name iptables
+%define version 1.4.8
+%define taglevel 0
+
+%define release %{taglevel}%{?pldistro:.%{pldistro}}%{?date:.%{date}}
+
+Vendor: PlanetLab
+Packager: PlanetLab Central <support@planet-lab.org>
+Distribution: PlanetLab %{plrelease}
+URL: %(echo %{url} | cut -d ' ' -f 2)
+
 Summary: Tools for managing Linux kernel packet filtering capabilities
-Version: 1.4.7
-Release: 2%{?dist}
+Name: %{name}
+Version: %{version}
+Release: %{release}
 Source: http://www.netfilter.org/projects/iptables/files/%{name}-%{version}.tar.bz2
 Source1: iptables.init
 Source2: iptables-config
 Source3: planetlab-config
 Patch1: copy-xid.patch
 Group: System Environment/Base
-URL: http://www.netfilter.org/
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 License: GPLv2
 BuildRequires: libselinux-devel
@@ -106,6 +121,7 @@ rm -rf %{buildroot}
 %post
 /sbin/ldconfig
 /sbin/chkconfig --add iptables
+service iptables restart
 
 %postun -p /sbin/ldconfig
 
@@ -166,6 +182,19 @@ fi
 %{_libdir}/pkgconfig/xtables.pc
 
 %changelog
+* Wed May 12 2010 S.Çağlar Onur <caglar@cs.princeton.edu> - iptables-1.4.7-5
+- Restart iptables service after package upgrades
+
+* Mon May 10 2010 S.Çağlar Onur <caglar@cs.princeton.edu> - iptables-1.4.7-4
+- Restore iIPTABLES_MODULES list
+
+* Mon May 03 2010 S.Çağlar Onur <caglar@cs.princeton.edu> - iptables-1.4.7-3
+- drop backward compatibility with older iptables versions as new kernels only support v2
+- remove unused modules from iptables-config file
+
+* Wed Apr 14 2010 Thierry Parmentelat <thierry.parmentelat@sophia.inria.fr> - iptables-1.4.7-2
+- fixed specfile for duplicate URL
+
 * Wed Mar 24 2010 Thomas Woerner <twoerner@redhat.com> 1.4.7-2
 - added default values for IPTABLES_STATUS_VERBOSE and
   IPTABLES_STATUS_LINENUMBERS in init script
